@@ -57,7 +57,7 @@ _sys.modules.setdefault("main", _sys.modules[__name__])
 
 IRAN_TZ = ZoneInfo("Asia/Tehran")
 
-app = FastAPI(title="Pars Space Gateway", docs_url=None, redoc_url=None)
+app = FastAPI(title="Sky Panel", docs_url=None, redoc_url=None)
 
 # Import and include xhttp_siz10 router - deferred until globals are defined
 xhttp_router = None
@@ -2609,7 +2609,7 @@ def generate_user_config(user_id: str, user: dict, inbound_id: str = None, addr:
         logger.warning("Skipping config for user %s: invalid config UUID %r", user_id, config_uuid)
         return ""
     username = user.get("username", user_id)
-    rem = f"ParsSpace-{username}"
+    rem = f"skypanel-{username}"
     if remark_tag:
         rem = f"{rem} {remark_tag}"
     remark = quote(rem)
@@ -2724,7 +2724,7 @@ def generate_user_config(user_id: str, user: dict, inbound_id: str = None, addr:
         params = ("encryption=none&security=tls&type=ws"
                   f"&host={quote(wdom)}&path={quote(rpath, safe='')}&sni={quote(wdom)}"
                   "&fp=chrome&alpn=http/1.1")
-        rev_rem = quote(f"ParsSpace-{username} Reverse".strip())
+        rev_rem = quote(f"skypanel-{username} Reverse".strip())
         return f"vless://{config_uuid}@{wdom}:443?{params}#{rev_rem}"
 
     # ── TUNNEL (user → Railway → CF Worker → site) — path /tunnel/{uuid} ──
@@ -2740,7 +2740,7 @@ def generate_user_config(user_id: str, user: dict, inbound_id: str = None, addr:
             params = ("encryption=none&security=tls&type=ws"
                       f"&host={quote(wdom)}&path={quote(rpath, safe='')}&sni={quote(wdom)}"
                       "&fp=chrome&alpn=http/1.1")
-            rev_rem = quote(f"ParsSpace-{username} Reverse".strip())
+            rev_rem = quote(f"skypanel-{username} Reverse".strip())
             return f"vless://{config_uuid}@{wdom}:443?{params}#{rev_rem}"
         # Plain tunnel: user → Railway → Worker → site (path /tunnel/{uuid},
         # addressed to the panel/Railway domain).
@@ -2748,7 +2748,7 @@ def generate_user_config(user_id: str, user: dict, inbound_id: str = None, addr:
         params = ("encryption=none&security=tls&type=ws"
                   f"&host={quote(panel_domain)}&path={quote(tpath, safe='')}&sni={quote(panel_domain)}"
                   "&fp=chrome&alpn=http/1.1")
-        tun_rem = quote(f"ParsSpace-{username} Tunnel".strip())
+        tun_rem = quote(f"skypanel-{username} Tunnel".strip())
         return f"vless://{config_uuid}@{panel_domain}:443?{params}#{tun_rem}"
 
     # The managed TLS+WS relay and proxy inbounds can share a configurable
@@ -6688,13 +6688,13 @@ async def update_settings(request: Request, _=Depends(require_auth)):
 # ══════════════════════════════════════════════════════════════════════════════
 # PANEL UPDATE - GitHub source updater (persistent data lives outside app dir)
 # ══════════════════════════════════════════════════════════════════════════════
-UPDATE_REPO = "PSP-Support/ParsSpace"
+UPDATE_REPO = "PSP-Support/skypanel"
 UPDATE_BRANCH = "main"
 
 async def _github_latest_sha() -> str:
     url = f"https://api.github.com/repos/{UPDATE_REPO}/commits/{UPDATE_BRANCH}"
     def _read():
-        req = urllib.request.Request(url, headers={"User-Agent":"ParsSpace-Updater","Accept":"application/vnd.github+json"})
+        req = urllib.request.Request(url, headers={"User-Agent":"skypanel-Updater","Accept":"application/vnd.github+json"})
         with urllib.request.urlopen(req, timeout=15) as r:
             return json.loads(r.read().decode("utf-8")).get("sha", "")
     return await asyncio.to_thread(_read)
@@ -14544,8 +14544,8 @@ async def bot_channel_run(_=Depends(require_auth)):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PARSSPACE CLOUDFLARE TRANSPORT — extended control endpoints
-# Source logic adapted into ParsSpace namespace; ParsSpace UI remains untouched.
+# skypanel CLOUDFLARE TRANSPORT — extended control endpoints
+# Source logic adapted into skypanel namespace; skypanel UI remains untouched.
 # ══════════════════════════════════════════════════════════════════════════════
 
 async def _pars_cf_section_ping(url: str, timeout: float = 5.0):
@@ -14577,7 +14577,7 @@ def _pars_cf_flag(code: str) -> str:
 
 @app.post("/api/reverse/create")
 async def pars_reverse_create(_=Depends(require_auth)):
-    """Create the standalone Reverse transport for ParsSpace Cloudflare Worker."""
+    """Create the standalone Reverse transport for skypanel Cloudflare Worker."""
     if not WORKER.get("connected"):
         raise HTTPException(status_code=400, detail="Cloudflare Worker متصل نیست")
     wdom = _worker_safe_domain(WORKER.get("worker_domain"))
@@ -14588,7 +14588,7 @@ async def pars_reverse_create(_=Depends(require_auth)):
         raise HTTPException(status_code=500, detail="ساخت Reverse KV ناموفق بود")
     async with INBOUNDS_LOCK:
         INBOUNDS["default-reverse"] = {
-            "name": "ParsSpace Reverse (CF Worker → Panel)",
+            "name": "skypanel Reverse (CF Worker → Panel)",
             "protocol": "reverse",
             "inbound_type": "transport",
             "port": 443,
@@ -14610,11 +14610,11 @@ async def pars_reverse_create(_=Depends(require_auth)):
     deployed = sc in (200, 201, 409)
     async with WORKER_LOCK:
         _tunnel_log(
-            f"ParsSpace Reverse روی {wdom} با مسیر /reverse/{{uuid}} ساخته شد"
+            f"skypanel Reverse روی {wdom} با مسیر /reverse/{{uuid}} ساخته شد"
             + ("" if deployed else f" — deploy ناموفق: {sc}")
         )
     await save_state()
-    log_activity("worker", "ParsSpace Reverse inbound ایجاد شد", "ok")
+    log_activity("worker", "skypanel Reverse inbound ایجاد شد", "ok")
     return {
         "ok": True, "inbound_id": "default-reverse", "deployed": deployed,
         "path": "/reverse/{uuid}", "domain": wdom,
@@ -14624,7 +14624,7 @@ async def pars_reverse_create(_=Depends(require_auth)):
 
 @app.post("/api/worker/inbound")
 async def pars_worker_ensure_inbound(_=Depends(require_auth)):
-    """Create/refresh the canonical ParsSpace Cloudflare Worker inbound."""
+    """Create/refresh the canonical skypanel Cloudflare Worker inbound."""
     if not WORKER.get("connected"):
         raise HTTPException(status_code=400, detail="Cloudflare Worker متصل نیست")
     if not await _ensure_worker_inbound():
@@ -14632,7 +14632,7 @@ async def pars_worker_ensure_inbound(_=Depends(require_auth)):
     sc, _sd = await _worker_deploy()
     deployed = sc in (200, 201, 409)
     await save_state()
-    log_activity("worker", "ParsSpace Cloudflare inbound بروزرسانی شد", "ok")
+    log_activity("worker", "skypanel Cloudflare inbound بروزرسانی شد", "ok")
     return {"ok": True, "inbound_id": "default-worker", "deployed": deployed}
 
 @app.get("/api/worker/sections")
